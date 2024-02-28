@@ -1,0 +1,51 @@
+#!/bin/bash
+# Kaden Jessee
+# Lab 3 - Failed Login Report
+# CS 3030 - Scripting Languages
+
+# Check LOGFILE
+if [ "$#" -ne 1 ]; then
+    echo "Usage: flog LOGFILE"
+    exit 1
+fi
+
+#add LOGFILE parameter in
+LOGFILE="$1"
+
+# Counting <UNKNOWN> separately
+unknown_count=$(grep -c 'Failed password for.*invalid' "$LOGFILE")
+
+# for handling commas
+format_number() {
+    awk '{printf "%'"'"'d\n", $1}' <<< "$1"
+}
+
+#grep handles search 'Failed password for'
+grep 'Failed password for ' "$LOGFILE" |
+	#change invalid to <UNKNOWN>
+    sed 's/invalid/\&lt;UNKNOWN\&gt;/' |
+	#regex for failed passwords
+    sed -n 's/.*Failed password for \([a-zA-Z0-9_]*\) .*/\1/p' |
+	#sort
+    sort |
+	#get unique
+    uniq -c |
+	#sort
+    sort -k1,1nr -k2,2 |
+    {
+        # header
+        echo "<html>"
+        echo "<body><h1>Failed Login Attempts Report as of $(date)</h1>"
+        # line with <UNKNOWN> count
+        echo "<br />   $(format_number "$unknown_count") &lt;UNKNOWN&gt;"
+        # rest of counts
+        while read count user; do
+            count_formatted=$(format_number "$count")
+            # Output the result in HTML format
+            echo "<br />   $count_formatted $user"
+        done
+        echo "</body> </html>"
+    }
+
+
+exit 0
